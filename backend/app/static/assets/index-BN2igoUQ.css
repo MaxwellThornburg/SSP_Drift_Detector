@@ -1,0 +1,1 @@
+@tailwind base;@tailwind components;@tailwind utilities;*{margin:0;padding:0;box-sizing:border-box}body{background-color:#1a1a1a}.metal-sheen{background:linear-gradient(135deg,rgba(255,255,255,.1) 0%,transparent 50%,rgba(0,0,0,.2) 100%)}.dod-seal{width:80px;height:80px;border-radius:50%;box-shadow:0 0 20px #0064c84d,inset 0 0 20px #00000080}

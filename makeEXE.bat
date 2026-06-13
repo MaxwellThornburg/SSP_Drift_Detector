@@ -4,4 +4,5 @@ call npm install
 call npm run build
 cd ..
 xcopy /Y /E "frontend\dist\*" "backend\app\static"
+rm dist/*
 pyinstaller backend/ssp_drift.spec
