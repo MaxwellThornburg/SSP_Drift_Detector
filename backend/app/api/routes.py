@@ -1,13 +1,13 @@
 # backend/app/api/routes.py
 
-import os
+import json
 import tempfile
 import shutil
 from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from git import Repo
-from app.models.schemas import DriftReport, AnalysisRequest, DriftItem
-from app.services.ssp_parser import SSPParser
+from app.models.schemas import DriftReport, DriftItem
+from app.services.ssp_parser import SSPParser, Control
 from app.services.repo_analyzer import RepoAnalyzer
 from app.services.drift_detector import DriftDetector
 
@@ -16,32 +16,45 @@ router = APIRouter()
 
 @router.post("/upload-ssp", response_model=dict)
 async def upload_ssp(file: UploadFile = File(...)):
-    """Upload an SSP document for parsing."""
+    """Upload and parse an SSP document. Returns parsed controls - no file persistence."""
     if not file.filename:
         raise HTTPException(status_code=400, detail="No file provided")
     
-    # Save uploaded file to temporary location
-    temp_dir = tempfile.mkdtemp()
-    file_path = Path(temp_dir) / file.filename
-    
     try:
-        with open(file_path, "wb") as f:
-            content = await file.read()
-            f.write(content)
+        # Read file content directly into memory
+        content = await file.read()
+        content_str = content.decode('utf-8')
         
-        # Parse the SSP to verify it's valid
+        # Parse SSP content
         parser = SSPParser()
-        controls = parser.parse_file(str(file_path))
+        controls = parser.parse_content(content_str)
+        
+        if not controls:
+            raise HTTPException(status_code=400, detail="No controls found in SSP file")
+        
+        # Convert controls to serializable format
+        controls_data = {
+            cid: {
+                "id": c.id,
+                "title": c.title,
+                "description": c.description,
+                "implementation_status": c.implementation_status
+            }
+            for cid, c in controls.items()
+        }
         
         return {
             "filename": file.filename,
-            "status": "uploaded",
-            "controls_found": len(controls),
-            "temp_path": str(file_path),
-            "temp_dir": temp_dir
+            "status": "parsed",
+            "controls_count": len(controls),
+            "controls": controls_data
         }
+        
+    except UnicodeDecodeError:
+        raise HTTPException(status_code=400, detail="File must be valid UTF-8 text")
+    except HTTPException:
+        raise
     except Exception as e:
-        shutil.rmtree(temp_dir, ignore_errors=True)
         raise HTTPException(status_code=400, detail=f"Failed to parse SSP: {str(e)}")
 
 
@@ -49,30 +62,44 @@ async def upload_ssp(file: UploadFile = File(...)):
 async def analyze_repo(
     repo_url: str = Form(...),
     branch: str = Form("main"),
-    ssp_path: str = Form(...),
-    ssp_filename: str = Form(...)
+    controls_json: str = Form(...)
 ):
-    """Analyze a remote repository against the uploaded SSP."""
+    """Clone remote repository and analyze against the provided SSP controls."""
     repo_temp_dir = None
     
     try:
-        # Validate SSP file exists
-        ssp_file = Path(ssp_path)
-        if not ssp_file.exists():
-            raise HTTPException(status_code=400, detail="SSP file not found. Upload it first.")
+        # Parse controls from JSON
+        try:
+            controls_data = json.loads(controls_json)
+        except json.JSONDecodeError:
+            raise HTTPException(status_code=400, detail="Invalid controls JSON")
+        
+        if not controls_data:
+            raise HTTPException(status_code=400, detail="No controls provided")
+        
+        # Reconstruct SSPParser with the controls
+        ssp_parser = SSPParser()
+        ssp_parser.controls = {
+            cid: Control(
+                id=c["id"],
+                title=c["title"],
+                description=c["description"],
+                implementation_status=c.get("implementation_status", "not_implemented")
+            )
+            for cid, c in controls_data.items()
+        }
         
         # Clone the remote repository
         repo_temp_dir = tempfile.mkdtemp()
         try:
-            repo = Repo.clone_from(repo_url, repo_temp_dir, branch=branch, depth=1)
+            Repo.clone_from(repo_url, repo_temp_dir, branch=branch, depth=1)
         except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Failed to clone repository: {str(e)}")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Failed to clone repository: {str(e)}"
+            )
         
-        # Parse the SSP
-        ssp_parser = SSPParser()
-        ssp_parser.parse_file(str(ssp_file))
-        
-        # Analyze the repository
+        # Analyze the cloned repository
         repo_analyzer = RepoAnalyzer(repo_temp_dir)
         repo_analyzer.analyze()
         
@@ -80,7 +107,7 @@ async def analyze_repo(
         drift_detector = DriftDetector(ssp_parser, repo_analyzer)
         report = drift_detector.detect()
         
-        # Convert results to DriftReport schema
+        # Build drift items from non-compliant controls
         drift_items = []
         for result in report["results"]:
             if result["status"] == "non_compliant":
@@ -115,10 +142,7 @@ async def analyze_repo(
 @router.get("/results/{session_id}", response_model=DriftReport)
 async def get_results(session_id: str):
     """Retrieve cached analysis results."""
-    # Since the app is stateless, this endpoint is not fully implemented.
-    # For now, return a 404 indicating results are not cached.
     raise HTTPException(
-        status_code=404, 
-        detail="Results not found. The application is stateless - results are not cached. "
-               "Please run the analysis again."
+        status_code=404,
+        detail="Results not cached. This application is stateless - please run analysis again."
     )
