@@ -224,3 +224,9 @@ frontend/dist/
 # OS
 .DS_Store
 Thumbs.db
+
+# Tailwind
+backend/app/static/index*
+
+# Exe
+dist/*
