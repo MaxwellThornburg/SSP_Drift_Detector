@@ -1,3 +1,46 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Rajdhani', sans-serif;
+  background: 
+    radial-gradient(ellipse at top, #2a2a2a 0%, #0a0a0a 100%),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 2px,
+      rgba(255,255,255,0.03) 2px,
+      rgba(255,255,255,0.03) 4px
+    );
+  background-blend-mode: overlay;
+  min-height: 100vh;
+  color: #e0e0e0;
+  overflow: hidden;
+}
+
+.metal-sheen {
+  background: linear-gradient(
+    135deg,
+    rgba(255,255,255,0.1) 0%,
+    transparent 50%,
+    rgba(0,0,0,0.2) 100%
+  );
+}
+
+.dod-seal {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  box-shadow: 
+    0 0 20px rgba(0,100,200,0.3),
+    inset 0 0 20px rgba(0,0,0,0.5);
+}
