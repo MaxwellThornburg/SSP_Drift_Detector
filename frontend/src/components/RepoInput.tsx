@@ -11,7 +11,7 @@ const RepoInput: React.FC<RepoInputProps> = ({ value, onChange }) => {
   const [isValid, setIsValid] = useState(true);
 
   const validateUrl = (url: string): boolean => {
-    if (!url) return true; // Empty is valid (optional)
+    if (!url) return true;
     
     const githubPattern = /^https:\/\/github\.com\/[\w.-]+\/[\w.-]+(\/)?$/;
     const gitlabPattern = /^https:\/\/gitlab\.com\/[\w.-]+\/[\w.-]+(\/)?$/;
@@ -39,21 +39,6 @@ const RepoInput: React.FC<RepoInputProps> = ({ value, onChange }) => {
         Repository URL
       </label>
       <div className="relative">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <svg
-            className="h-5 w-5 text-gray-500"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
-            />
-          </svg>
-        </div>
         <input
           type="url"
           id="repo-url"
@@ -61,7 +46,7 @@ const RepoInput: React.FC<RepoInputProps> = ({ value, onChange }) => {
           onChange={handleChange}
           placeholder="https://github.com/username/repository"
           className={`
-            block w-full pl-10 pr-3 py-3
+            block w-full px-4 py-3
             bg-gray-800 border rounded-lg
             text-gray-200 placeholder-gray-500
             focus:outline-none focus:ring-2 focus:ring-blue-500
@@ -74,19 +59,7 @@ const RepoInput: React.FC<RepoInputProps> = ({ value, onChange }) => {
         />
         {value && isValid && (
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-            <svg
-              className="h-5 w-5 text-green-500"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
+            <span className="text-green-500 font-bold text-sm">✓</span>
           </div>
         )}
       </div>

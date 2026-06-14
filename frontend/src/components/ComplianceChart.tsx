@@ -17,69 +17,32 @@ const ComplianceChart: React.FC<ComplianceChartProps> = ({ data }) => {
   const { compliant, nonCompliant, notImplemented, compliancePercentage } = data;
   const total = compliant + nonCompliant + notImplemented;
 
-  // Calculate pie chart segments
+  // Calculate angles for conic-gradient
   const compliantAngle = (compliant / total) * 360;
   const nonCompliantAngle = (nonCompliant / total) * 360;
   
-  // SVG path calculations for pie slices
-  const getPieSlice = (startAngle: number, endAngle: number, radius: number = 80) => {
-    const startRad = (startAngle - 90) * (Math.PI / 180);
-    const endRad = (endAngle - 90) * (Math.PI / 180);
-    
-    const x1 = 100 + radius * Math.cos(startRad);
-    const y1 = 100 + radius * Math.sin(startRad);
-    const x2 = 100 + radius * Math.cos(endRad);
-    const y2 = 100 + radius * Math.sin(endRad);
-    
-    const largeArc = endAngle - startAngle > 180 ? 1 : 0;
-    
-    return `M 100 100 L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`;
-  };
-
-  let currentAngle = 0;
-  const compliantSlice = getPieSlice(currentAngle, currentAngle + compliantAngle);
-  currentAngle += compliantAngle;
-  const nonCompliantSlice = getPieSlice(currentAngle, currentAngle + nonCompliantAngle);
-  currentAngle += nonCompliantAngle;
-  const notImplementedSlice = getPieSlice(currentAngle, currentAngle + ((notImplemented / total) * 360));
+  const gradient = `conic-gradient(
+    #22c55e 0deg ${compliantAngle}deg,
+    #ef4444 ${compliantAngle}deg ${compliantAngle + nonCompliantAngle}deg,
+    #6b7280 ${compliantAngle + nonCompliantAngle}deg 360deg
+  )`;
 
   return (
     <div className="flex flex-col items-center">
-      <div className="relative">
-        {/* Pie Chart SVG */}
-        <svg width="200" height="200" className="transform -rotate-0">
-          {/* Compliant slice - Green */}
-          <path
-            d={compliantSlice}
-            fill="#22c55e"
-            stroke="#1f2937"
-            strokeWidth="2"
-          />
-          {/* Non-compliant slice - Red */}
-          <path
-            d={nonCompliantSlice}
-            fill="#ef4444"
-            stroke="#1f2937"
-            strokeWidth="2"
-          />
-          {/* Not implemented slice - Gray */}
-          <path
-            d={notImplementedSlice}
-            fill="#6b7280"
-            stroke="#1f2937"
-            strokeWidth="2"
-          />
+      <div className="relative w-48 h-48">
+        {/* CSS Conic Gradient Donut Chart */}
+        <div 
+          className="w-full h-full rounded-full"
+          style={{ background: total > 0 ? gradient : '#374151' }}
+        >
           {/* Center hole for donut effect */}
-          <circle cx="100" cy="100" r="50" fill="#111827" />
-        </svg>
-        
-        {/* Center percentage display */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center">
-            <span className="text-3xl font-bold text-white">
-              {compliancePercentage.toFixed(0)}%
-            </span>
-            <p className="text-xs text-gray-400">Compliant</p>
+          <div className="absolute inset-4 rounded-full bg-gray-900 flex items-center justify-center">
+            <div className="text-center">
+              <span className="text-3xl font-bold text-white">
+                {compliancePercentage.toFixed(0)}%
+              </span>
+              <p className="text-xs text-gray-400">Compliant</p>
+            </div>
           </div>
         </div>
       </div>

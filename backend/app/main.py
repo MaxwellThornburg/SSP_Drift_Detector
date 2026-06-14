@@ -1,6 +1,7 @@
 # backend/app/main.py
 
 import os
+import sys
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,7 +22,15 @@ if os.getenv("DEV_MODE"):
 # Include API routes
 app.include_router(router, prefix="/api")
 
+# Determine base directory (handles PyInstaller's sys._MEIPASS)
+if getattr(sys, 'frozen', False):
+    # Running as compiled executable
+    base_dir = sys._MEIPASS
+else:
+    # Running as script
+    base_dir = os.path.dirname(__file__)
+
 # Serve static frontend files (production/desktop mode)
-static_dir = os.path.join(os.path.dirname(__file__), "static")
+static_dir = os.path.join(base_dir, "static")
 if os.path.exists(static_dir):
     app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
