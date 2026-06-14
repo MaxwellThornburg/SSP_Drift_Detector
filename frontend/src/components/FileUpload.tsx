@@ -50,7 +50,6 @@ const FileUpload: React.FC<FileUploadProps> = ({
       if (files && files.length > 0 && isAllowed(files[0])) {
         onFileSelect(files[0]);
       }
-      // Reset so the same file can be re-selected after clearing
       e.target.value = '';
     },
     [onFileSelect, isAllowed]
@@ -58,18 +57,18 @@ const FileUpload: React.FC<FileUploadProps> = ({
 
   return (
     <div className="w-full">
-      <label className="block text-sm font-medium text-gray-300 mb-2">
+      <label className="block text-sm font-medium text-slate-700 mb-2">
         {label}
       </label>
       <div
         onDragOver={handleDragOver}
         onDrop={handleDrop}
         className={`
-          relative border-2 border-dashed rounded-lg p-6
+          relative border-2 border-dashed rounded-lg p-6 overflow-hidden
           transition-colors duration-200
           ${selectedFile
             ? 'border-green-500 bg-green-500/10'
-            : 'border-gray-600 hover:border-gray-500 bg-gray-800/50'
+            : 'border-slate-300 hover:border-slate-400 bg-white/50'
           }
         `}
       >
@@ -77,24 +76,25 @@ const FileUpload: React.FC<FileUploadProps> = ({
           type="file"
           accept={accept}
           onChange={handleFileInput}
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+          style={{ color: 'transparent' }} // Hides native "No file chosen" text
         />
         <div className="text-center">
           {!selectedFile ? (
             <>
-              <p className="mt-2 text-sm text-gray-400">
-                <span className="font-medium text-blue-400">Click to upload</span> or drag and drop
+              <p className="mt-2 text-sm text-slate-600">
+                <span className="font-medium text-blue-600">Click to upload</span> or drag and drop
               </p>
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-slate-500">
                 {description}
               </p>
             </>
           ) : (
             <>
-              <p className="mt-2 text-sm text-green-400 font-medium">
+              <p className="mt-2 text-sm text-green-700 font-semibold">
                 {selectedFile.name}
               </p>
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-slate-500">
                 {(selectedFile.size / 1024).toFixed(1)} KB
               </p>
             </>

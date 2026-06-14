@@ -33,19 +33,16 @@ const ComplianceChart: React.FC<ComplianceChartProps> = ({ data }) => {
     { name: 'Indeterminate', value: notImplemented, color: COLORS.indeterminate },
   ];
 
-  // Fallback if total is 0
   const displayData = total > 0 ? chartData : [{ name: 'No Data', value: 1, color: COLORS.empty }];
 
   return (
     <div className="flex flex-col items-center">
-      {/* Fixed pixel dimensions prevent the chart from collapsing to 0 */}
-      <div className="relative" style={{ width: 256, height: 256 }}>
-        
+      <div style={{ width: 256, height: 256 }}>
         <PieChart width={256} height={256}>
           <Pie
             data={displayData}
-            cx={128} // Center X (half of 256)
-            cy={128} // Center Y (half of 256)
+            cx={128}
+            cy={128}
             innerRadius={65}
             outerRadius={100}
             paddingAngle={2}
@@ -58,34 +55,45 @@ const ComplianceChart: React.FC<ComplianceChartProps> = ({ data }) => {
             ))}
           </Pie>
           
+          {/* Native SVG text - Bulletproof and guaranteed to render in the center */}
+          <text 
+            x="50%" 
+            y="45%" 
+            textAnchor="middle" 
+            dominantBaseline="middle" 
+            style={{ fontSize: '28px', fontWeight: 'bold', fill: '#1e293b' }}
+          >
+            {total > 0 ? `${compliancePercentage.toFixed(0)}%` : '0%'}
+          </text>
+          <text 
+            x="50%" 
+            y="58%" 
+            textAnchor="middle" 
+            dominantBaseline="middle" 
+            style={{ fontSize: '12px', fontWeight: '500', fill: '#64748b' }}
+          >
+            Compliant
+          </text>
+
           {total > 0 && (
             <Tooltip 
               contentStyle={{ 
-                backgroundColor: '#1e293b', 
-                border: '1px solid #334155', 
+                backgroundColor: '#ffffff', // Light/White background
+                border: '1px solid #cbd5e1', // Light slate border
                 borderRadius: '8px',
-                color: '#f8fafc',
+                color: '#0f172a', // Dark text for high contrast
                 fontSize: '12px',
-                fontWeight: '600'
+                fontWeight: '600',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
               }}
               cursor={{ fill: 'rgba(0,0,0,0.05)' }}
             />
           )}
         </PieChart>
-        
-        {/* Center hole text overlay */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="text-center">
-            <span className="text-3xl font-bold text-slate-800">
-              {total > 0 ? `${compliancePercentage.toFixed(0)}%` : '0%'}
-            </span>
-            <p className="text-xs text-slate-500 font-medium">Compliant</p>
-          </div>
-        </div>
       </div>
 
       {/* Custom Legend */}
-      <div className="mt-6 flex flex-wrap justify-center gap-6">
+      <div className="mt-8 flex flex-wrap justify-center gap-6">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS.compliant }}></div>
           <span className="text-sm text-slate-700 font-medium">
