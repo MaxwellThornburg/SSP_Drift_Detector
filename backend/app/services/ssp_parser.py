@@ -1,64 +1,73 @@
-# backend/app/services/ssp_parser.py
-
 import re
-from typing import Dict, List, Set
+from typing import Dict, Set
 from dataclasses import dataclass
-
 
 @dataclass
 class Control:
     id: str
     title: str
     description: str
-    implementation_status: str = "not_implemented"
-
+    family: str
 
 class SSPParser:
-    """Parser for System Security Plan (SSP) documents."""
-    
-    CONTROL_PATTERN = re.compile(r'([A-Z]{2}-\d{1,2}(?:\s*\(\d+\))?)')
-    
     def __init__(self):
         self.controls: Dict[str, Control] = {}
-    
-    def parse_file(self, file_path: str) -> Dict[str, Control]:
-        """Parse an SSP file and extract all controls."""
-        with open(file_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-        return self.parse_content(content)
-    
+        
     def parse_content(self, content: str) -> Dict[str, Control]:
-        """Parse SSP content string and extract controls."""
         self.controls = {}
+        
+        # 1. Normalize line endings and strip BOM (Byte Order Mark)
+        if content.startswith('\ufeff'):
+            content = content[1:]
+        content = content.replace('\r\n', '\n').replace('\r', '\n')
         
         lines = content.split('\n')
         current_control = None
+        description_lines = []
+        
+        # 2. Highly permissive regex
+        header_pattern = re.compile(r'^##\s+([A-Z]{2}-\d{1,2}(?:\.\d+)?(?:\s*$$\d+$$)?)\s*-\s*(.*)')
         
         for line in lines:
-            line = line.strip()
-            if not line:
-                continue
+            stripped = line.strip()
+            match = header_pattern.search(stripped)
             
-            # Check for control ID patterns (e.g., AC-1, SC-7(1))
-            match = self.CONTROL_PATTERN.match(line)
             if match:
+                # Save previous control
+                if current_control:
+                    current_control.description = ' '.join(description_lines).strip()
+                    self.controls[current_control.id] = current_control
+                
                 control_id = match.group(1).replace(' ', '')
+                title = match.group(2).strip()
+                
                 current_control = Control(
                     id=control_id,
-                    title=line,
-                    description=""
+                    title=title,
+                    description="",
+                    family=control_id.split('-')[0]
                 )
-                self.controls[control_id] = current_control
+                description_lines = []
+            elif current_control and stripped and not stripped.startswith('#'):
+                description_lines.append(stripped)
+                
+        # Save the last control
+        if current_control:
+            current_control.description = ' '.join(description_lines).strip()
+            self.controls[current_control.id] = current_control
             
-            elif current_control and line:
-                current_control.description += line + " "
-        
+        # DEBUG LOGS: Check your backend terminal for these!
+        print(f"[SSP PARSER DEBUG] Content length: {len(content)} chars")
+        print(f"[SSP PARSER DEBUG] Total controls found: {len(self.controls)}")
+        if self.controls:
+            print(f"[SSP PARSER DEBUG] Controls: {list(self.controls.keys())}")
+        else:
+            print(f"[SSP PARSER DEBUG] First 100 chars of file: {repr(content[:100])}")
+            
         return self.controls
-    
+
     def get_required_controls(self) -> Set[str]:
-        """Return set of required control IDs."""
         return set(self.controls.keys())
-    
-    def get_control(self, control_id: str) -> Control | None:
-        """Get a specific control by ID."""
+        
+    def get_control(self, control_id: str) -> Control:
         return self.controls.get(control_id)

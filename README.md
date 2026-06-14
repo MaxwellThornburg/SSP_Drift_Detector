@@ -1,6 +1,6 @@
-﻿# SSP Drift Detector
+# SSP Drift Detector
 
-A Windows desktop application that detects compliance drift between your System Security Plan (SSP) and actual code implementation.
+A Windows desktop application that detects compliance drift between your System Security Plan (SSP) and actual infrastructure configuration.
 
 ## Prerequisites
 
@@ -22,9 +22,9 @@ npm --version         # Should show 9+
 
 ## Architecture
 
-- **Backend**: Python (FastAPI) — parses SSP documents, analyzes repositories, and detects drift
-- **Frontend**: React + Vite + Tailwind CSS — UI for uploading SSPs, entering repo info, and viewing compliance results
-- **Desktop Shell**: pywebview + PyInstaller — packages everything as a single Windows desktop executable
+- **Backend**: Python (FastAPI) — parses SSP documents, analyzes infrastructure YAML, and detects drift using a rule engine.
+- **Frontend**: React + Vite + TypeScript + Tailwind CSS — UI for uploading SSPs and infrastructure configs, and viewing compliance results.
+- **Desktop Shell**: pywebview + PyInstaller — packages everything as a single Windows desktop executable.
 
 ## Project Structure
 
@@ -33,13 +33,13 @@ SSP_Drift_Detector/
 ├── backend/
 │   ├── app/
 │   │   ├── api/          # FastAPI route definitions
-│   │   ├── services/     # Business logic (SSP parsing, repo analysis, drift detection)
+│   │   ├── services/     # Business logic (SSP parsing, YAML analysis, drift detection)
 │   │   └── models/       # Pydantic schemas
 │   ├── requirements.txt
 │   └── run_desktop.py    # Entry point for pywebview desktop app
 ├── frontend/
 │   ├── src/
-│   │   ├── components/   # React components
+│   │   ├── components/   # React components (FileUpload, ComplianceChart)
 │   │   ├── hooks/        # Custom React hooks (API calls)
 │   │   └── styles/       # Tailwind CSS
 │   ├── index.html
@@ -110,7 +110,8 @@ Key packages from `requirements.txt`:
 | fastapi | Web framework |
 | uvicorn | ASGI server |
 | pydantic | Data validation |
-| python-docx | DOCX file parsing |
+| PyYAML | Infrastructure YAML parsing |
+| python-multipart | File upload handling |
 | pyinstaller | Build executable |
 | pywebview | Native window for desktop app |
 
@@ -126,8 +127,10 @@ Key packages from `package.json`:
 | Package | Purpose |
 |---------|---------|
 | react | UI framework |
+| recharts | Data visualization / charting |
 | vite | Build tool |
 | tailwindcss | Styling |
+| typescript | Type safety |
 
 Install all with:
 ```bash
@@ -137,9 +140,10 @@ npm install
 
 ## How It Works
 
-1. **Upload SSP** — Upload your System Security Plan document (DOCX format)
-2. **Analyze Repository** — Provide a Git repository URL to analyze
-3. **View Results** — See a compliance chart showing drift between documented controls and actual implementation
+1. **Upload SSP** — Upload your System Security Plan document (Markdown `.md` or text `.txt` format). The parser extracts control headers and descriptions.
+2. **Upload Infrastructure Configuration** — Upload your infrastructure state as a YAML file. The analyzer extracts security posture attributes (Identity, Network, Compute, Logging, Storage, Crypto, Monitoring, Config Mgmt).
+3. **Detect Drift** — The rule engine evaluates each SSP control against the infrastructure posture.
+4. **View Results** — See a compliance chart and a detailed list of control evaluations showing **PASS**, **FAIL**, or **INDETERMINATE** statuses with evidence and gap descriptions.
 
 ## Troubleshooting
 
@@ -148,6 +152,9 @@ Install Node.js: https://nodejs.org/
 
 ### "python not found"
 Install Python: https://www.python.org/downloads/
+
+### Frontend crashes or goes blank after analyzing
+This usually happens if the backend returns an unexpected JSON format. Open your browser's Developer Tools (F12), go to the **Console** tab, and look for the `Backend response:` log to verify the API payload. Ensure your backend server is running the latest code.
 
 ## License
 

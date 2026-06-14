@@ -3,8 +3,7 @@ from typing import List, Optional
 
 
 class AnalysisRequest(BaseModel):
-    repo_url: str
-    branch: str = "main"
+    infra_filename: str
     session_id: Optional[str] = None
 
 
@@ -18,7 +17,7 @@ class DriftItem(BaseModel):
 
 
 class DriftReport(BaseModel):
-    repo_url: str
+    source_file: str
     total_controls: int
     compliant: int
     non_compliant: int

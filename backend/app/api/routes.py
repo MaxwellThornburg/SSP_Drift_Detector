@@ -5,10 +5,9 @@ import tempfile
 import shutil
 from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
-from git import Repo
 from app.models.schemas import DriftReport, DriftItem
 from app.services.ssp_parser import SSPParser, Control
-from app.services.repo_analyzer import RepoAnalyzer
+from app.services.infra_analyzer import InfraAnalyzer
 from app.services.drift_detector import DriftDetector
 
 router = APIRouter()
@@ -58,85 +57,49 @@ async def upload_ssp(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail=f"Failed to parse SSP: {str(e)}")
 
 
-@router.post("/analyze", response_model=DriftReport)
-async def analyze_repo(
-    repo_url: str = Form(...),
-    branch: str = Form("main"),
-    controls_json: str = Form(...)
+# REMOVED response_model=DriftReport so it returns the raw dictionary
+@router.post("/analyze")
+async def analyze_infra(
+    ssp_file: UploadFile = File(...),
+    infra_file: UploadFile = File(...)
 ):
-    """Clone remote repository and analyze against the provided SSP controls."""
-    repo_temp_dir = None
-    
+    """Analyze infrastructure YAML file against the provided SSP document."""
     try:
-        # Parse controls from JSON
-        try:
-            controls_data = json.loads(controls_json)
-        except json.JSONDecodeError:
-            raise HTTPException(status_code=400, detail="Invalid controls JSON")
+        # Read and parse SSP file
+        ssp_content = await ssp_file.read()
+        ssp_content_str = ssp_content.decode('utf-8')
         
-        if not controls_data:
-            raise HTTPException(status_code=400, detail="No controls provided")
-        
-        # Reconstruct SSPParser with the controls
         ssp_parser = SSPParser()
-        ssp_parser.controls = {
-            cid: Control(
-                id=c["id"],
-                title=c["title"],
-                description=c["description"],
-                implementation_status=c.get("implementation_status", "not_implemented")
-            )
-            for cid, c in controls_data.items()
-        }
+        controls = ssp_parser.parse_content(ssp_content_str)
         
-        # Clone the remote repository
-        repo_temp_dir = tempfile.mkdtemp()
+        if not controls:
+            raise HTTPException(status_code=400, detail="No controls found in SSP file")
+        
+        # Read and parse the infrastructure YAML file
+        infra_content = await infra_file.read()
+        infra_content_str = infra_content.decode('utf-8')
+        
+        infra_analyzer = InfraAnalyzer(infra_content_str)
         try:
-            Repo.clone_from(repo_url, repo_temp_dir, branch=branch, depth=1)
-        except Exception as e:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Failed to clone repository: {str(e)}"
-            )
-        
-        # Analyze the cloned repository
-        repo_analyzer = RepoAnalyzer(repo_temp_dir)
-        repo_analyzer.analyze()
+            infra_analyzer.analyze()
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
         
         # Detect drift
-        drift_detector = DriftDetector(ssp_parser, repo_analyzer)
+        drift_detector = DriftDetector(ssp_parser, infra_analyzer)
         report = drift_detector.detect()
         
-        # Build drift items from non-compliant controls
-        drift_items = []
-        for result in report["results"]:
-            if result["status"] == "non_compliant":
-                control = ssp_parser.get_control(result["control_id"])
-                drift_items.append(DriftItem(
-                    control_id=result["control_id"],
-                    control_name=control.title if control else result["control_id"],
-                    ssp_description=control.description if control else "",
-                    actual_implementation=None,
-                    severity="high",
-                    details=result["gap_description"]
-                ))
+        # Return the raw report dictionary directly! 
+        # It already contains 'summary', 'drift_detected', and 'results' 
+        # which perfectly matches the React frontend's AnalysisResult interface.
+        return report
         
-        return DriftReport(
-            repo_url=repo_url,
-            total_controls=report["summary"]["total_controls"],
-            compliant=report["summary"]["compliant"],
-            non_compliant=report["summary"]["non_compliant"],
-            drift_items=drift_items
-        )
-        
+    except UnicodeDecodeError:
+        raise HTTPException(status_code=400, detail="Files must be valid UTF-8 text")
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
-    finally:
-        # Clean up cloned repository
-        if repo_temp_dir:
-            shutil.rmtree(repo_temp_dir, ignore_errors=True)
 
 
 @router.get("/results/{session_id}", response_model=DriftReport)
